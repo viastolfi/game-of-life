@@ -10,7 +10,7 @@
 #define BLACK_COLOR 0x000000
 #define GREEN_COLOR 0x00ff00
 #define GRAY_COLOR  0x808080
-#define CELL_WIDTH  25
+#define CELL_WIDTH  10
 
 void initMatrix(int** matrix, int row_number, int column_number)
 {
@@ -30,11 +30,11 @@ int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_nu
 
     for (int i = x - 1; i <= x + 1; ++i)
     {
-        if (i < 0 || i > row_number)
+        if (i < 0 || i >= row_number)
             continue;
         for (int j = y - 1; j <= y + 1; ++j)
         {
-            if (j < 0 || j > column_number)
+            if (j < 0 || j >= column_number)
                 continue;
             if (x == i && j == y)
                 continue;
