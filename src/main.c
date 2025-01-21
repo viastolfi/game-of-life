@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <SDL2/SDL.h>
 
 #define WIDTH 900
@@ -8,7 +10,19 @@
 #define BLACK_COLOR 0x000000
 #define GREEN_COLOR 0x00ff00
 #define GRAY_COLOR  0x808080
-#define CELL_WIDTH 25
+#define CELL_WIDTH  25
+
+void initMatrix(int** matrix, int row_number, int column_number)
+{
+    printf("Row : %d, Column : %d\n", row_number, column_number);
+    for (int i = 0; i < row_number; ++i)
+    {
+        for (int j = 0; j < column_number; ++j)
+        {
+            matrix[i][j] = rand() % 2; 
+        } 
+    }
+}
 
 int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_number)
 {
@@ -35,7 +49,13 @@ int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_nu
 
 void updateCells(int** matrix, int row_number, int column_number)
 {
-    int m[row_number][column_number];
+    int** m = (int**)malloc(row_number * sizeof(int*));
+    for (int i = 0; i < row_number; ++i) 
+    {
+        m[i] = (int*)malloc(column_number * sizeof(int));
+        memset(m[i], 0, column_number * sizeof(int));
+    }
+
     for (int i = 0; i < row_number; ++i)
     {
         for (int j = 0; j < column_number; ++j)
@@ -66,6 +86,12 @@ void updateCells(int** matrix, int row_number, int column_number)
                 matrix[i][j] = m[i][j];
         }
     }
+
+    for (int i = 0; i < row_number; ++i) 
+    {
+        free(m[i]);
+    }
+    free(m);
 }
 
 void renderGrid(SDL_Surface* surface, int row_number, int column_number)
@@ -92,7 +118,7 @@ void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_n
             if (matrix[i][j])
             {
                 // draw alives cells 
-                SDL_Rect cell = (SDL_Rect) {i*CELL_WIDTH,j*CELL_WIDTH,CELL_WIDTH,CELL_WIDTH};
+                SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH,i*CELL_WIDTH,CELL_WIDTH,CELL_WIDTH};
                 SDL_FillRect(surface, &cell, BLACK_COLOR);
             } 
         } 
@@ -101,6 +127,7 @@ void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_n
 
 int main(int argc, char** argv)
 {
+    srand(time(NULL));
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow("Conway's game of life", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
     SDL_Surface* surface = SDL_GetWindowSurface(window);
@@ -114,14 +141,10 @@ int main(int argc, char** argv)
     for (int i = 0; i < row_number; ++i)
     {
         matrix[i] = (int*)malloc(column_number * sizeof(int)); 
-        memset(matrix[i], 0, column_number * sizeof(int));
+        memset(matrix[i], 0, column_number * sizeof(int)); 
     }
 
-    matrix[4][1] = 1;
-    matrix[4][2] = 1;
-    matrix[4][3] = 1;
-    matrix[3][3] = 1;
-    matrix[2][2] = 1;
+    initMatrix(matrix, row_number, column_number);
     
     int simulation_running = 1;
     SDL_Event event;
@@ -143,6 +166,12 @@ int main(int argc, char** argv)
         SDL_UpdateWindowSurface(window);
         SDL_Delay(500);
     } while (simulation_running);
+
+    for (int i = 0; i < row_number; ++i)
+    {
+        free(matrix[i]);
+    }
+    free(matrix);
 
     SDL_DestroyWindow(window);
 
