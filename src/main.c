@@ -3,23 +3,83 @@
 
 #define WIDTH 900
 #define HEIGHT 600
+
 #define WHITE_COLOR 0xffffff
 #define BLACK_COLOR 0x000000
 #define GREEN_COLOR 0x00ff00
-#define CELL_WIDTH 50
+#define GRAY_COLOR  0x808080
+#define CELL_WIDTH 25
+
+int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_number)
+{
+    int alives = 0;
+
+    for (int i = x - 1; i <= x + 1; ++i)
+    {
+        if (i < 0 || i > row_number)
+            continue;
+        for (int j = y - 1; j <= y + 1; ++j)
+        {
+            if (j < 0 || j > column_number)
+                continue;
+            if (x == i && j == y)
+                continue;
+
+            if (matrix[i][j] == 1)
+                ++alives;
+        }
+    }
+
+    return alives;
+}
+
+void updateCells(int** matrix, int row_number, int column_number)
+{
+    int m[row_number][column_number];
+    for (int i = 0; i < row_number; ++i)
+    {
+        for (int j = 0; j < column_number; ++j)
+        {
+            m[i][j] = 0; 
+        } 
+    }
+
+    for (int i = 0; i < row_number; ++i)
+    {
+        for (int j = 0; j < column_number; ++j)
+        {
+            
+            int alives_neighbours = getAliveNeighbours(matrix, i, j, row_number, column_number);
+            if (alives_neighbours >= 2 && alives_neighbours <= 3 && matrix[i][j] == 1)
+                m[i][j] = 1;
+            
+            if (alives_neighbours == 3 && matrix[i][j] == 0)
+                m[i][j] = 1;
+        } 
+    } 
+
+    for (int i = 0; i < row_number; ++i)
+    {
+        for (int j = 0; j < column_number; ++j)
+        {
+            if (m[i][j] != matrix[i][j])
+                matrix[i][j] = m[i][j];
+        }
+    }
+}
 
 void renderGrid(SDL_Surface* surface, int row_number, int column_number)
 {
     for (int i = 0; i < row_number; ++i)
     {
         SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH, WIDTH, 1};
-        SDL_FillRect(surface, &line, WHITE_COLOR);
+        SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 
     for (int j = 0; j < column_number; ++j)
     {
         SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH, 0, 1, HEIGHT};
-        SDL_FillRect(surface, &line, WHITE_COLOR);
+        SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 }
 
@@ -32,8 +92,8 @@ void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_n
             if (matrix[i][j])
             {
                 // draw alives cells 
-                SDL_Rect cell = (SDL_Rect) {i*CELL_WIDTH,i*CELL_WIDTH,CELL_WIDTH,CELL_WIDTH};
-                SDL_FillRect(surface, &cell, GREEN_COLOR);
+                SDL_Rect cell = (SDL_Rect) {i*CELL_WIDTH,j*CELL_WIDTH,CELL_WIDTH,CELL_WIDTH};
+                SDL_FillRect(surface, &cell, BLACK_COLOR);
             } 
         } 
     } 
@@ -57,9 +117,12 @@ int main(int argc, char** argv)
         memset(matrix[i], 0, column_number * sizeof(int));
     }
 
-    //set a first living cell
-    matrix[1][1] = 1;
-
+    matrix[4][1] = 1;
+    matrix[4][2] = 1;
+    matrix[4][3] = 1;
+    matrix[3][3] = 1;
+    matrix[2][2] = 1;
+    
     int simulation_running = 1;
     SDL_Event event;
     do 
@@ -71,15 +134,19 @@ int main(int argc, char** argv)
                 simulation_running = 0; 
             } 
         }
-        SDL_FillRect(surface, &clear_rect, BLACK_COLOR);
+        SDL_FillRect(surface, &clear_rect, WHITE_COLOR);
 
         renderCell(surface, matrix, row_number, column_number);
         renderGrid(surface, row_number, column_number);
+        updateCells(matrix, row_number, column_number);
 
         SDL_UpdateWindowSurface(window);
-        SDL_Delay(20);
+        SDL_Delay(500);
     } while (simulation_running);
 
+    SDL_DestroyWindow(window);
+
+    SDL_Quit();
 
     return 0;
 }
