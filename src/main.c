@@ -12,44 +12,62 @@
 #define GRAY_COLOR  0x808080
 #define CELL_WIDTH  3
 
-void resetCells(int** matrix, int row_number, int column_number)
+typedef struct Camera
 {
-    for (int i = 0; i < row_number; ++i)
+    int x, y, scale;
+}Camera;
+
+typedef struct Canva
+{
+    int** matrix;
+    int row_number, column_number;
+    Camera camera;
+}Canva;
+
+void changeCellState(Canva canva, int x, int y)
+{
+    canva.matrix[y / CELL_WIDTH*canva.camera.scale][x / CELL_WIDTH*canva.camera.scale] = 
+        canva.matrix[y / CELL_WIDTH*canva.camera.scale][x / CELL_WIDTH*canva.camera.scale] == 0 ? 1 : 0;
+}
+
+void resetCells(Canva canva)
+{
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        for (int j = 0; j < column_number; ++j)
+        for (int j = 0; j < canva.column_number; ++j)
         {
-            matrix[i][j] = 0;
+            canva.matrix[i][j] = 0;
         }
     } 
 }
 
-void initMatrix(int** matrix, int row_number, int column_number)
+void initMatrix(Canva canva)
 {
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        for (int j = 0; j < column_number; ++j)
+        for (int j = 0; j < canva.column_number; ++j)
         {
-            matrix[i][j] = rand() % 2; 
+            canva.matrix[i][j] = rand() % 2; 
         } 
     }
 }
 
-int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_number)
+int getAliveNeighbours(Canva canva, int x, int y)
 {
     int alives = 0;
 
     for (int i = x - 1; i <= x + 1; ++i)
     {
-        if (i < 0 || i >= row_number)
+        if (i < 0 || i >= canva.row_number)
             continue;
         for (int j = y - 1; j <= y + 1; ++j)
         {
-            if (j < 0 || j >= column_number)
+            if (j < 0 || j >= canva.column_number)
                 continue;
             if (x == i && j == y)
                 continue;
 
-            if (matrix[i][j] == 1)
+            if (canva.matrix[i][j] == 1)
                 ++alives;
         }
     }
@@ -57,78 +75,78 @@ int getAliveNeighbours(int** matrix, int x, int y, int row_number, int column_nu
     return alives;
 }
 
-void updateCells(int** matrix, int row_number, int column_number)
+void updateCells(Canva canva)
 {
-    int** m = (int**)malloc(row_number * sizeof(int*));
-    for (int i = 0; i < row_number; ++i) 
+    int** m = (int**)malloc(canva.row_number * sizeof(int*));
+    for (int i = 0; i < canva.row_number; ++i) 
     {
-        m[i] = (int*)malloc(column_number * sizeof(int));
-        memset(m[i], 0, column_number * sizeof(int));
+        m[i] = (int*)malloc(canva.column_number * sizeof(int));
+        memset(m[i], 0, canva.column_number * sizeof(int));
     }
 
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        for (int j = 0; j < column_number; ++j)
+        for (int j = 0; j < canva.column_number; ++j)
         {
             m[i][j] = 0; 
         } 
     }
 
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        for (int j = 0; j < column_number; ++j)
+        for (int j = 0; j < canva.column_number; ++j)
         {
             
-            int alives_neighbours = getAliveNeighbours(matrix, i, j, row_number, column_number);
-            if (alives_neighbours >= 2 && alives_neighbours <= 3 && matrix[i][j] == 1)
+            int alives_neighbours = getAliveNeighbours(canva, i, j);
+            if (alives_neighbours >= 2 && alives_neighbours <= 3 && canva.matrix[i][j] == 1)
                 m[i][j] = 1;
             
-            if (alives_neighbours == 3 && matrix[i][j] == 0)
+            if (alives_neighbours == 3 && canva.matrix[i][j] == 0)
                 m[i][j] = 1;
         } 
     } 
 
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        for (int j = 0; j < column_number; ++j)
+        for (int j = 0; j < canva.column_number; ++j)
         {
-            if (m[i][j] != matrix[i][j])
-                matrix[i][j] = m[i][j];
+            if (m[i][j] != canva.matrix[i][j])
+                canva.matrix[i][j] = m[i][j];
         }
     }
 
-    for (int i = 0; i < row_number; ++i) 
+    for (int i = 0; i < canva.row_number; ++i) 
     {
         free(m[i]);
     }
     free(m);
 }
 
-void renderGrid(SDL_Surface* surface, int row_number, int column_number, int scale)
+void renderGrid(SDL_Surface* surface, Canva canva)
 {
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH*scale, WIDTH, 1};
+        SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH*canva.camera.scale, WIDTH, 1};
         SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 
-    for (int j = 0; j < column_number; ++j)
+    for (int j = 0; j < canva.column_number; ++j)
     {
-        SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH*scale, 0, 1, HEIGHT};
+        SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH*canva.camera.scale, 0, 1, HEIGHT};
         SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 }
 
-void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_number, int scale)
+void renderCell(SDL_Surface* surface, Canva canva)
 {
-    for (int i=0; i < row_number / scale; ++i)
+    for (int i=0; i < canva.row_number / canva.camera.scale; ++i)
     {
-        for (int j=0; j < column_number / scale; ++j)
+        for (int j=0; j < canva.column_number / canva.camera.scale; ++j)
         {
-            if (matrix[i][j])
+            if (canva.matrix[i][j])
             {
                 // draw alives cells 
-                SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH*scale,i*CELL_WIDTH*scale,CELL_WIDTH*scale,CELL_WIDTH*scale};
+                SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH*canva.camera.scale,i*CELL_WIDTH*canva.camera.scale,CELL_WIDTH*canva.camera.scale,CELL_WIDTH*canva.camera.scale};
                 SDL_FillRect(surface, &cell, BLACK_COLOR);
             } 
         } 
@@ -147,16 +165,17 @@ int main(int argc, char** argv)
     int row_number = HEIGHT / CELL_WIDTH;
     
     //declaring game's matrix
+    Camera camera = {0, 0, 1};
     int** matrix = (int**)malloc(row_number * sizeof(int*));
     for (int i = 0; i < row_number; ++i)
     {
         matrix[i] = (int*)malloc(column_number * sizeof(int)); 
         memset(matrix[i], 0, column_number * sizeof(int)); 
     }
+    Canva canva = {matrix, row_number, column_number, camera};
 
-    initMatrix(matrix, row_number, column_number);
+    initMatrix(canva);
     
-    int scale = 1;
     int simulation_pause = 1;
     int simulation_running = 1;
     SDL_Event event;
@@ -177,50 +196,54 @@ int main(int argc, char** argv)
                 {
                     case SDLK_r:
                         if (simulation_pause)
-                            resetCells(matrix, row_number, column_number);
+                            resetCells(canva);
                         break;
                     case SDLK_g:
                         if (simulation_pause)
-                            initMatrix(matrix, row_number, column_number);
+                            initMatrix(canva);
                         break;
                     case SDLK_PLUS:
-                        if (scale < 5)
-                            scale++;
+                        if (canva.camera.scale < 5)
+                            canva.camera.scale++;
                         break;
                     case SDLK_EQUALS:
                         if (event.key.keysym.mod & KMOD_SHIFT) {
-                            if (scale < 5)
-                                scale++;
+                            if (canva.camera.scale < 5)
+                                canva.camera.scale++;
                         }
                         break;
                     case SDLK_MINUS:
-                        if (scale > 1)
-                            scale--;
+                        if (canva.camera.scale > 1)
+                            canva.camera.scale--;
                     default:
                         // none used key pressed
                         break;
                 }
+            }
+            if (event.type == SDL_MOUSEBUTTONDOWN && simulation_pause)
+            {
+                changeCellState(canva, event.button.x, event.button.y);
             }
         }
         SDL_FillRect(surface, &clear_rect, WHITE_COLOR);
 
         if (!simulation_pause)
         {
-            updateCells(matrix, row_number, column_number);
+            updateCells(canva);
         }
 
-        renderCell(surface, matrix, row_number, column_number, scale);
-        renderGrid(surface, row_number, column_number, scale);
+        renderCell(surface, canva);
+        renderGrid(surface, canva);
         
         SDL_UpdateWindowSurface(window);
         SDL_Delay(500);
     } while (simulation_running);
 
-    for (int i = 0; i < row_number; ++i)
+    for (int i = 0; i < canva.row_number; ++i)
     {
-        free(matrix[i]);
+        free(canva.matrix[i]);
     }
-    free(matrix);
+    free(canva.matrix);
 
     SDL_DestroyWindow(window);
 
