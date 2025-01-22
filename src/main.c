@@ -14,6 +14,7 @@
 
 typedef struct Camera
 {
+    // x, y = top left corner of the displayed grid
     int x, y, scale;
 }Camera;
 
@@ -26,8 +27,12 @@ typedef struct Canva
 
 void changeCellState(Canva canva, int x, int y)
 {
-    canva.matrix[y / CELL_WIDTH*canva.camera.scale][x / CELL_WIDTH*canva.camera.scale] = 
-        canva.matrix[y / CELL_WIDTH*canva.camera.scale][x / CELL_WIDTH*canva.camera.scale] == 0 ? 1 : 0;
+    // x, y = coordinates of the click (in window context)
+    // dx, dy = real coordinates on the grid
+    int dx = x / (CELL_WIDTH*canva.camera.scale) + canva.camera.x; 
+    int dy = y / (CELL_WIDTH*canva.camera.scale) + canva.camera.y; 
+
+    canva.matrix[dy][dx] = canva.matrix[dy][dx] == 0 ? 1 : 0;
 }
 
 void resetCells(Canva canva)
@@ -124,13 +129,13 @@ void updateCells(Canva canva)
 
 void renderGrid(SDL_Surface* surface, Canva canva)
 {
-    for (int i = 0; i < canva.row_number; ++i)
+    for (int i = 0; i < canva.row_number / canva.camera.scale; ++i)
     {
         SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH*canva.camera.scale, WIDTH, 1};
         SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 
-    for (int j = 0; j < canva.column_number; ++j)
+    for (int j = 0; j < canva.column_number / canva.camera.scale; ++j)
     {
         SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH*canva.camera.scale, 0, 1, HEIGHT};
         SDL_FillRect(surface, &line, GRAY_COLOR);
@@ -143,7 +148,7 @@ void renderCell(SDL_Surface* surface, Canva canva)
     {
         for (int j=0; j < canva.column_number / canva.camera.scale; ++j)
         {
-            if (canva.matrix[i][j])
+            if (canva.matrix[i+canva.camera.y][j+canva.camera.x])
             {
                 // draw alives cells 
                 SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH*canva.camera.scale,i*CELL_WIDTH*canva.camera.scale,CELL_WIDTH*canva.camera.scale,CELL_WIDTH*canva.camera.scale};
@@ -214,7 +219,28 @@ int main(int argc, char** argv)
                         break;
                     case SDLK_MINUS:
                         if (canva.camera.scale > 1)
+                        {
                             canva.camera.scale--;
+                            canva.camera.x = 0;
+                            canva.camera.y = 0;
+                        }
+                        break;
+                    case SDLK_RIGHT:
+                        if (canva.camera.x + canva.column_number / canva.camera.scale < canva.column_number)
+                            canva.camera.x+= 3;
+                        break;
+                    case SDLK_LEFT:
+                        if (canva.camera.x > 0)
+                            canva.camera.x-= 3;
+                        break;
+                    case SDLK_DOWN:
+                        if (canva.camera.y + canva.row_number / canva.camera.scale < canva.row_number)
+                            canva.camera.y+= 3;
+                        break;
+                    case SDLK_UP:
+                        if (canva.camera.y > 0)
+                            canva.camera.y-= 3;
+                        break;
                     default:
                         // none used key pressed
                         break;
