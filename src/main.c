@@ -10,11 +10,21 @@
 #define BLACK_COLOR 0x000000
 #define GREEN_COLOR 0x00ff00
 #define GRAY_COLOR  0x808080
-#define CELL_WIDTH  10
+#define CELL_WIDTH  3
+
+void resetCells(int** matrix, int row_number, int column_number)
+{
+    for (int i = 0; i < row_number; ++i)
+    {
+        for (int j = 0; j < column_number; ++j)
+        {
+            matrix[i][j] = 0;
+        }
+    } 
+}
 
 void initMatrix(int** matrix, int row_number, int column_number)
 {
-    printf("Row : %d, Column : %d\n", row_number, column_number);
     for (int i = 0; i < row_number; ++i)
     {
         for (int j = 0; j < column_number; ++j)
@@ -94,31 +104,31 @@ void updateCells(int** matrix, int row_number, int column_number)
     free(m);
 }
 
-void renderGrid(SDL_Surface* surface, int row_number, int column_number)
+void renderGrid(SDL_Surface* surface, int row_number, int column_number, int scale)
 {
     for (int i = 0; i < row_number; ++i)
     {
-        SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH, WIDTH, 1};
+        SDL_Rect line = (SDL_Rect) {0, i*CELL_WIDTH*scale, WIDTH, 1};
         SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 
     for (int j = 0; j < column_number; ++j)
     {
-        SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH, 0, 1, HEIGHT};
+        SDL_Rect line = (SDL_Rect) {j*CELL_WIDTH*scale, 0, 1, HEIGHT};
         SDL_FillRect(surface, &line, GRAY_COLOR);
     }
 }
 
-void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_number)
+void renderCell(SDL_Surface* surface, int** matrix, int row_number, int column_number, int scale)
 {
-    for (int i=0; i < row_number; ++i)
+    for (int i=0; i < row_number / scale; ++i)
     {
-        for (int j=0; j < column_number; ++j)
+        for (int j=0; j < column_number / scale; ++j)
         {
             if (matrix[i][j])
             {
                 // draw alives cells 
-                SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH,i*CELL_WIDTH,CELL_WIDTH,CELL_WIDTH};
+                SDL_Rect cell = (SDL_Rect) {j*CELL_WIDTH*scale,i*CELL_WIDTH*scale,CELL_WIDTH*scale,CELL_WIDTH*scale};
                 SDL_FillRect(surface, &cell, BLACK_COLOR);
             } 
         } 
@@ -146,6 +156,8 @@ int main(int argc, char** argv)
 
     initMatrix(matrix, row_number, column_number);
     
+    int scale = 1;
+    int simulation_pause = 1;
     int simulation_running = 1;
     SDL_Event event;
     do 
@@ -156,13 +168,50 @@ int main(int argc, char** argv)
             {
                 simulation_running = 0; 
             } 
+            if (event.type == SDL_KEYDOWN)
+            {
+                if (event.key.keysym.sym == SDLK_SPACE)
+                    simulation_pause = simulation_pause == 1 ? 0 : 1;
+
+                switch (event.key.keysym.sym)
+                {
+                    case SDLK_r:
+                        if (simulation_pause)
+                            resetCells(matrix, row_number, column_number);
+                        break;
+                    case SDLK_g:
+                        if (simulation_pause)
+                            initMatrix(matrix, row_number, column_number);
+                        break;
+                    case SDLK_PLUS:
+                        if (scale < 5)
+                            scale++;
+                        break;
+                    case SDLK_EQUALS:
+                        if (event.key.keysym.mod & KMOD_SHIFT) {
+                            if (scale < 5)
+                                scale++;
+                        }
+                        break;
+                    case SDLK_MINUS:
+                        if (scale > 1)
+                            scale--;
+                    default:
+                        // none used key pressed
+                        break;
+                }
+            }
         }
         SDL_FillRect(surface, &clear_rect, WHITE_COLOR);
 
-        renderCell(surface, matrix, row_number, column_number);
-        renderGrid(surface, row_number, column_number);
-        updateCells(matrix, row_number, column_number);
+        if (!simulation_pause)
+        {
+            updateCells(matrix, row_number, column_number);
+        }
 
+        renderCell(surface, matrix, row_number, column_number, scale);
+        renderGrid(surface, row_number, column_number, scale);
+        
         SDL_UpdateWindowSurface(window);
         SDL_Delay(500);
     } while (simulation_running);
